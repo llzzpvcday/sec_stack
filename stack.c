@@ -8,7 +8,7 @@
 #include <string.h>
 #include <time.h>
 
-//-------------------------------------Defines-------------------------------------------
+//-------------------------------------Options-------------------------------------------
 
 #define STACK_ALLOCATED_ENOUGH_CHECK // This check only available with glibc
 #define STACK_STRUCT_HASH_CHECK
@@ -16,7 +16,7 @@
 #define STACK_CANARY_CHECK
 #define STACK_DEBUG
 
-// TODO: readme
+//-------------------------------------Defines-------------------------------------------
 
 #ifdef STACK_CANARY_CHECK
 #define ON_CANARY(...) __VA_ARGS__
@@ -154,7 +154,7 @@ int main() {
 
   for (int i = 0; i < 30; i += 1) {
     if (i == 15) {
-      // stack.buf[11] = 1337.0;
+      stack.buf[11] = 1337.0;
       // stack.canary_begin = 123;
     }
     printf("Popped: " ELEM_T_FORMAT_STRING "\n", stack_pop(&stack));

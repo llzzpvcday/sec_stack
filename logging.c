@@ -6,6 +6,10 @@
 #define RED   "\033[1;31m"
 #define GREEN "\033[1;32m"
 
+#define LOG_ENABLED
+
+#ifdef LOG_ENABLED
+
 FILE *log_file = NULL;
 
 void log_init() {
@@ -61,3 +65,11 @@ void log_close() { fclose(log_file); }
     fprintf(stderr, __VA_ARGS__);                                              \
     fprintf(stderr, RESET);                                                    \
   }
+
+#else
+#define $log(...)
+#define $info(...)
+#define $error(...)
+void log_init() {}
+void log_close() {}
+#endif
