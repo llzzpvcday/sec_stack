@@ -6,7 +6,7 @@
 #define RED   "\033[1;31m"
 #define GREEN "\033[1;32m"
 
-FILE *log_file = {};
+FILE *log_file = NULL;
 
 void log_init() {
   // Source - https://stackoverflow.com/a/10917605

@@ -10,7 +10,7 @@
 
 //-------------------------------------Defines-------------------------------------------
 
-#define STACK_ALLOCKATED_ENOUGH_CHECK // This check only available with glibc
+#define STACK_ALLOCATED_ENOUGH_CHECK // This check only available with glibc
 #define STACK_STRUCT_HASH_CHECK
 #define STACK_BUF_HASH_CHECK
 #define STACK_CANARY_CHECK
@@ -65,6 +65,7 @@ ON_CANARY(
 )
 
 const size_t STACK_MIN_CAPACITY = 16;
+const size_t SHRINK_RATIO       = 4;
 
 typedef struct stack_t {
   ON_CANARY(elem_t canary_begin;)
@@ -77,10 +78,9 @@ typedef struct stack_t {
   size_t size;
   size_t capacity;
 
-  ON_CANARY(elem_t canary_end;)
-
   ON_STRUCT_HASH(uint64_t struct_hash;)
   ON_BUF_HASH(uint64_t buf_hash;)
+  ON_CANARY(elem_t canary_end;)
 
   ON_DEBUG(
       const char *filename;
@@ -89,19 +89,23 @@ typedef struct stack_t {
       int line;)
 } stack_t;
 
+// clang-format off
 typedef enum stack_status_code {
-  STACK_OK                     = 0,
-  BUF_NULL_PTR                 = -1,
-  STACK_NULL_PTR               = -2,
-  SIZE_GREATER_THAN_CAP        = -3,
-  ALLOCATED_NOT_ENOUGH         = -4,
-  STRUCT_CANARY_BEGIN_MISMATCH = -7,
-  STRUCT_CANARY_END_MISMATCH   = -8,
-  BUF_CANARY_BEGIN_MISMATCH    = -9,
-  BUF_CANARY_END_MISMATCH      = -10,
-  STRUCT_HASH_MISMATCH         = -11,
-  BUF_HASH_MISMATCH            = -12,
+                 STACK_OK                     = 0,
+                 BUF_NULL_PTR                 = -1,
+                 STACK_NULL_PTR               = -2,
+                 SIZE_GREATER_THAN_CAP        = -3,
+  #ifdef STACK_ALLOCATED_ENOUGH_CHECK
+                 ALLOCATED_NOT_ENOUGH         = -4,
+  #endif
+  ON_CANARY(     STRUCT_CANARY_BEGIN_MISMATCH = -7,)
+  ON_CANARY(     STRUCT_CANARY_END_MISMATCH   = -8,)
+  ON_CANARY(     BUF_CANARY_BEGIN_MISMATCH    = -9,)
+  ON_CANARY(     BUF_CANARY_END_MISMATCH      = -10,)
+  ON_STRUCT_HASH(STRUCT_HASH_MISMATCH         = -11,)
+  ON_BUF_HASH(   BUF_HASH_MISMATCH            = -12,)
 } stack_status_code;
+// clang-format on
 
 //--------------------------------Prototypes---------------------------------------------
 
@@ -229,7 +233,7 @@ stack_status_code verify(stack_t *stack) {
     return SIZE_GREATER_THAN_CAP;
   }
 
-#ifdef STACK_ALLOCKATED_ENOUGH_CHECK
+#ifdef STACK_ALLOCATED_ENOUGH_CHECK
   if (malloc_usable_size(stack->buf ON_CANARY( - 1)) < calc_buf_size(stack->capacity)) {
     return ALLOCATED_NOT_ENOUGH;
   }
@@ -291,39 +295,39 @@ void stack_dump(stack_t *stack) {
                    stack->name, stack, stack->init_func_name, stack->filename,
                    stack->line);)
 
+  // clang-format off
   $log(
 
-      ON_CANARY(
-      "CANARY            =" BLUE " 0x%016lx\n"
-      "" RESET "canary_begin      = " BLUE "0x%016lx\n"
-          )
+      ON_CANARY(       "CANARY            =" BLUE " 0x%016lx\n"
+                      "" RESET "canary_begin      = " BLUE "0x%016lx\n")
 
-       "" RESET "buf               = " BLUE "[%p]\n"
-       "" RESET "size              = " BLUE "%zu\n"
-       "" RESET "capacity          = " BLUE "%zu\n" 
+                      "" RESET "buf               = " BLUE "[%p]\n"
+                      "" RESET "size              = " BLUE "%zu\n"
+                      "" RESET "capacity          = " BLUE "%zu\n" 
 
       ON_CANARY(
-      "" RESET "canary_end        = " BLUE "0x%016lx\n"
+                      "" RESET "canary_end        = " BLUE "0x%016lx\n"
       )
        ON_STRUCT_HASH("" RESET "saved_struct_hash = " BLUE "0x%016lx\n")
-       ON_BUF_HASH("" RESET "saved_buf_hash    = " BLUE "0x%016lx\n\n")
+       ON_BUF_HASH(   "" RESET "saved_buf_hash    = " BLUE "0x%016lx\n\n")
        ON_STRUCT_HASH("" RESET "cur_struct_hash   = " BLUE "0x%016lx\n")
-       ON_BUF_HASH("" RESET "cur_buf_hash      = " BLUE "0x%016lx\n"),
+       ON_BUF_HASH(   "" RESET "cur_buf_hash      = " BLUE "0x%016lx\n"),
 
       ON_CANARY(
-      *(unsigned long *)(&canary),
-      *(unsigned long *)(&stack->canary_begin),
+                      *(unsigned long *)(&canary),
+                      *(unsigned long *)(&stack->canary_begin),
       )
-      stack->buf,
-      stack->size,
-      stack->capacity
+                      stack->buf,
+                      stack->size,
+                      stack->capacity
       ON_CANARY(
-      ,*(unsigned long *)(&stack->canary_end)
+                     ,*(unsigned long *)(&stack->canary_end)
       )
       ON_STRUCT_HASH(,stack->struct_hash)
-      ON_BUF_HASH(,stack->buf_hash)
+      ON_BUF_HASH(   ,stack->buf_hash)
       ON_STRUCT_HASH(,struct_hash)
-      ON_BUF_HASH(,buf_hash));
+      ON_BUF_HASH(   ,buf_hash));
+  // clang-format on
 
   if (stack->buf != NULL) {
     ON_BUF_HASH(uint64_t buf_hash = stack_buf_hash(stack);)
@@ -553,7 +557,8 @@ elem_t stack_pop(stack_t *stack) {
   elem_t ret = stack->buf[stack->size - 1];
   stack->size -= 1;
 
-  if (stack->size * 4 < stack->capacity && stack->size > STACK_MIN_CAPACITY) {
+  if (stack->size * SHRINK_RATIO < stack->capacity &&
+      stack->size > STACK_MIN_CAPACITY) {
     stack_resize(stack, stack->size);
   }
 
