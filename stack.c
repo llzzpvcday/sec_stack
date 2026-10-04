@@ -428,7 +428,8 @@ void debug_stack_status_handler(stack_t *stack,
 
     stack_dump(stack);
 
-    fprintf(stderr, "Press q to abort program, or any other key to continue\n");
+    fprintf(stderr,
+        "Error: Press q to abort program, or any other key to continue\n");
     char a = getchar();
     if (a == 'q') {
       abort();
@@ -516,6 +517,7 @@ void stack_destruct(stack_t *stack) {
 
 void stack_resize(stack_t *stack, size_t new_capacity) {
   STACK_CHECK(stack)
+
   if (new_capacity < stack->size) {
     new_capacity = stack->size;
   }
@@ -534,25 +536,30 @@ void stack_resize(stack_t *stack, size_t new_capacity) {
 #if defined(STACK_BUF_HASH_CHECK) || defined(STACK_STRUCT_HASH_CHECK)
   update_hashes(stack);
 #endif
+
   STACK_CHECK(stack);
 }
 
 void stack_push(stack_t *stack, elem_t elem) {
   STACK_CHECK(stack)
+
   if (stack->size == stack->capacity) {
     stack_resize(stack, stack->capacity * 2);
   }
 
   stack->buf[stack->size] = elem;
   stack->size += 1;
+
 #if defined(STACK_BUF_HASH_CHECK) || defined(STACK_STRUCT_HASH_CHECK)
   update_hashes(stack);
 #endif
+
   STACK_CHECK(stack)
 }
 
 elem_t stack_pop(stack_t *stack) {
   STACK_CHECK(stack)
+
   assert(stack->size > 0);
   elem_t ret = stack->buf[stack->size - 1];
   stack->size -= 1;
