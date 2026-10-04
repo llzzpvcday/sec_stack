@@ -1,3 +1,4 @@
+#include "colors.h"
 #include "logging.c"
 #include <assert.h>
 #include <malloc.h>
@@ -41,18 +42,6 @@
 #else
 #define ON_DEBUG(...)
 #endif
-
-#define CYAN      "\033[1;36m"
-#define BOLD      "\033[1;1m"
-#define RED       "\033[1;31m"
-#define RESET     "\033[1;0m"
-#define UNDERLINE "\033[1;4m"
-#define GREEN     "\033[1;32m"
-#define YELLOW    "\033[1;33m"
-#define GREY      "\033[1;90m"
-#define BLUE      "\033[1;34m"
-#define MAGENTA   "\033[1;35m"
-#define BYELLOW   "\033[1;93m"
 
 //-------------------------------------Stack_structure-----------------------------------
 

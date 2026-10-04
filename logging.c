@@ -1,10 +1,6 @@
+#include "colors.h"
 #include <stdio.h>
 #include <time.h>
-
-#define RESET "\033[1;0m"
-#define BLUE  "\033[1;34m"
-#define RED   "\033[1;31m"
-#define GREEN "\033[1;32m"
 
 // ------------Log_level_Settings----------------------------
 
