@@ -136,20 +136,27 @@ int main() {
                                 __func__,
                                 __LINE__));
 
-  for (int i = 0; i < 30; i += 1) {
-    stack_push(&stack, (double)(rand() % 256));
-    // stack_dump(&stack, stdout);
-  }
-
-  for (int i = 0; i < 30; i += 1) {
-    if (i == 15) {
-      stack.buf[11] = 1337.0;
-      // stack.canary_begin = 123;
-    }
-    printf("Popped: " ELEM_T_FORMAT_STRING "\n", stack_pop(&stack));
-    // stack_dump(&stack, stdout);
-  }
-
+  stack_push(&stack, 10);
+  stack_push(&stack, 20);
+  stack_push(&stack, 30);
+  stack_push(&stack, 40);
+  stack.buf[stack.capacity] = 123;
+  stack_push(&stack, 100);
+  //
+  // for (int i = 0; i < 30; i += 1) {
+  //   stack_push(&stack, (double)(rand() % 256));
+  //   // stack_dump(&stack, stdout);
+  // }
+  //
+  // for (int i = 0; i < 30; i += 1) {
+  //   if (i == 15) {
+  //     stack.buf[11] = 1337.0;
+  //     // stack.canary_begin = 123;
+  //   }
+  //   printf("Popped: " ELEM_T_FORMAT_STRING "\n", stack_pop(&stack));
+  //   // stack_dump(&stack, stdout);
+  // }
+  //
   stack_destruct(&stack);
   log_close();
 }
@@ -391,11 +398,11 @@ void debug_stack_status_handler(stack_t *stack,
       break;
 
     case BUF_CANARY_BEGIN_MISMATCH:
-      $error("Canary in the beggining of structure is corrupted\n");
+      $error("Canary in the beggining of buffer is corrupted\n");
       break;
 
     case BUF_CANARY_END_MISMATCH:
-      $error("Canary in the end of structure is corrupted\n");
+      $error("Canary in the end of buffer is corrupted\n");
       break;
           )
 

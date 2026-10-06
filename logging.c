@@ -90,10 +90,10 @@ void log_close() {
   {                                                                            \
     char buffer[20];                                                           \
     get_cur_time_str(buffer, sizeof(buffer), "%d-%m-%Y %H:%M:%S");             \
-    fprintf(log_file, GREEN "%19s - [INFO] - " RESET, buffer);                 \
+    fprintf(log_file, GREEN "%19s - [INFO ] - " RESET, buffer);                \
     fprintf(log_file, __VA_ARGS__);                                            \
     fprintf(log_file, RESET);                                                  \
-    fprintf(stderr, GREEN "%19s - [INFO] - " RESET, buffer);                   \
+    fprintf(stderr, GREEN "%19s - [INFO ] - " RESET, buffer);                  \
     fprintf(stderr, __VA_ARGS__);                                              \
     fprintf(stderr, RESET);                                                    \
   }
