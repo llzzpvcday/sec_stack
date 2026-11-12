@@ -11,11 +11,12 @@
 
 //-------------------------------------Options-------------------------------------------
 
-#define STACK_ALLOCATED_ENOUGH_CHECK // This check only available with glibc
-#define STACK_STRUCT_HASH_CHECK
-#define STACK_BUF_HASH_CHECK
-#define STACK_CANARY_CHECK
-#define STACK_DEBUG
+// #define STACK_ALLOCATED_ENOUGH_CHECK // This check only available with glibc
+// #define STACK_STRUCT_HASH_CHECK
+// #define STACK_BUF_HASH_CHECK
+// #define STACK_CANARY_CHECK
+// #define STACK_DEBUG
+// #define STACK_CHECK_ENABLED
 
 //-------------------------------------Defines-------------------------------------------
 
@@ -45,8 +46,13 @@
 
 //-------------------------------------Stack_structure-----------------------------------
 
-typedef double elem_t;
+#ifndef elem_t
+#define elem_t double
+#endif
+
+#ifndef ELEM_T_FORMAT_STRING
 #define ELEM_T_FORMAT_STRING "%lf"
+#endif
 
 ON_CANARY(
     elem_t canary = 0; // Will be random value after first stack_init() call
@@ -114,12 +120,12 @@ uint64_t stack_buf_hash(stack_t *stack);
 stack_status_code verify(stack_t *stack);
 size_t calc_buf_size(size_t capacity);
 void stack_dump(stack_t *stack);
+void stack_dump_values(stack_t *stack);
 elem_t *calloc_stack_buf(size_t capacity);
 elem_t *realloc_stack_buf(elem_t *buf, size_t capacity);
 ON_CANARY(void place_buf_canaries(elem_t *buf, size_t capacity);)
 void stack_init(stack_t *stack,
-    size_t capacity,
-    ON_DEBUG(const char *filename, const char *name, const char *init_func_name, const int line) );
+    size_t capacity ON_DEBUG(, const char *filename, const char *name, const char *init_func_name, const int line) );
 void stack_destruct(stack_t *stack);
 void stack_resize(stack_t *stack, size_t new_capacity);
 void stack_push(stack_t *stack, elem_t elem);
@@ -127,39 +133,39 @@ elem_t stack_pop(stack_t *stack);
 
 //--------------------------------Main---------------------------------------------------
 
-int main() {
-  log_init();
-  stack_t stack = {};
-  stack_init(&stack, 5 ON_DEBUG(, 
-                                __FILE__,
-                                "stack1",
-                                __func__,
-                                __LINE__));
-
-  stack_push(&stack, 10);
-  stack_push(&stack, 20);
-  stack_push(&stack, 30);
-  stack_push(&stack, 40);
-  stack.buf[stack.capacity] = 123;
-  stack_push(&stack, 100);
-  //
-  // for (int i = 0; i < 30; i += 1) {
-  //   stack_push(&stack, (double)(rand() % 256));
-  //   // stack_dump(&stack, stdout);
-  // }
-  //
-  // for (int i = 0; i < 30; i += 1) {
-  //   if (i == 15) {
-  //     stack.buf[11] = 1337.0;
-  //     // stack.canary_begin = 123;
-  //   }
-  //   printf("Popped: " ELEM_T_FORMAT_STRING "\n", stack_pop(&stack));
-  //   // stack_dump(&stack, stdout);
-  // }
-  //
-  stack_destruct(&stack);
-  log_close();
-}
+// int main() {
+//   log_init();
+//   stack_t stack = {};
+//   stack_init(&stack, 5 ON_DEBUG(,
+//                                 __FILE__,
+//                                 "stack1",
+//                                 __func__,
+//                                 __LINE__));
+//
+//   stack_push(&stack, 10);
+//   stack_push(&stack, 20);
+//   stack_push(&stack, 30);
+//   stack_push(&stack, 40);
+//   stack.buf[stack.capacity] = 123;
+//   stack_push(&stack, 100);
+//   //
+//   // for (int i = 0; i < 30; i += 1) {
+//   //   stack_push(&stack, (double)(rand() % 256));
+//   //   // stack_dump(&stack, stdout);
+//   // }
+//   //
+//   // for (int i = 0; i < 30; i += 1) {
+//   //   if (i == 15) {
+//   //     stack.buf[11] = 1337.0;
+//   //     // stack.canary_begin = 123;
+//   //   }
+//   //   printf("Popped: " ELEM_T_FORMAT_STRING "\n", stack_pop(&stack));
+//   //   // stack_dump(&stack, stdout);
+//   // }
+//   //
+//   stack_destruct(&stack);
+//   log_close();
+// }
 
 //---------------------------------------------------------------------------------------
 
@@ -443,7 +449,11 @@ void debug_stack_status_handler(stack_t *stack,
   debug_stack_status_handler(                                                  \
       stack, verify(stack), __func__, __FILE__, __LINE__);
 #else
+#ifdef STACK_CHECK_ENABLED
 #define STACK_CHECK(stack) assert(verify(stack) == STACK_OK);
+#else 
+#define STACK_CHECK(stack)
+#endif
 #endif
 
 ON_CANARY(
@@ -456,9 +466,9 @@ ON_CANARY(
 // ------------------------------------Stack_init_function---------------------------------------
 
 void stack_init(stack_t *stack,
-    size_t capacity,
+    size_t capacity
 
-    ON_DEBUG(const char *filename, const char *name,
+    ON_DEBUG(, const char *filename, const char *name,
                          const char *init_func_name, const int line)
 
 ) {
@@ -571,4 +581,35 @@ elem_t stack_pop(stack_t *stack) {
 
   STACK_CHECK(stack)
   return ret;
+}
+void stack_dump_values(stack_t *stack) {
+  $log("----------------Stack dump--------------------------");
+  if (stack == NULL) {
+    $log("\nStack pointer is NULL\n");
+    return;
+  }
+
+  ON_STRUCT_HASH( uint64_t struct_hash = stack_struct_hash(*stack); )
+  ON_BUF_HASH(
+      uint64_t buf_hash = 0;
+
+      if (stack->buf != NULL) {
+        buf_hash = stack_buf_hash(stack);
+      }
+  )
+
+  if (stack->buf != NULL) {
+    for (int i = 0; i < stack->capacity; i += 1) {
+      if (i < stack->size) {
+        $log(BOLD CYAN "\n" GREEN "*[%d]" RESET "\t = ", i);
+      } else {
+        $log("\n " CYAN "[%d]" RESET "\t = ", i);
+      }
+      $log(BYELLOW ELEM_T_FORMAT_STRING RESET, stack->buf[i]);
+    }
+  } else {
+    $log("\nStack data pointer is NULL\n");
+  }
+
+  $log("\n----------------------------------------------------\n");
 }
